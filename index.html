@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Private Vehicle Cards</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #e2e8f0;
+      border-radius: 10px;
+    }
+
+    .ticket-cut {
+      position: relative;
+    }
+
+    .ticket-cut::before,
+    .ticket-cut::after {
+      content: '';
+      position: absolute;
+      bottom: 75px;
+      width: 20px;
+      height: 20px;
+      background: #f8fafc;
+      border-radius: 50%;
+      z-index: 10;
+    }
+
+    .ticket-cut::before { left: -10px; }
+    .ticket-cut::after { right: -10px; }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .animate-shimmer {
+      animation: shimmer 2s infinite;
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 via-white to-slate-100 min-h-screen flex flex-col items-center py-12 px-4">
+
+  <header class="text-center mb-12">
+    <div class="flex justify-center items-center gap-4 mb-4">
+      <div class="p-3 bg-white rounded-2xl shadow-sm border border-slate-200">
+        <i data-lucide="bus" class="text-teal-600 w-8 h-8"></i>
+      </div>
+      <div class="h-10 w-px bg-slate-300"></div>
+      <h1 class="text-2xl font-black tracking-tighter text-slate-800 uppercase italic">
+        <img src="/logo.png" width="140px" alt="Logo">
+      </h1>
+    </div>
+    <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Private Bus Passes</h2>
+    <p class="text-slate-500 mt-2 font-medium uppercase tracking-widest text-xs">Batch Generation System</p>
+  </header>
+
+  <main class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+    <section class="glass rounded-3xl p-8 shadow-xl border border-white">
+      <h3 class="text-xl font-bold mb-6 flex items-center gap-3 text-slate-800">
+        <span class="bg-slate-800 text-white w-7 h-7 rounded-lg flex items-center justify-center text-xs">01</span>
+        Card Type
+      </h3>
+      <div class="space-y-4">
+        <label class="relative flex items-center p-4 cursor-pointer rounded-2xl border-2 border-slate-100 bg-white hover:border-blue-500 transition-all group">
+          <input type="radio" name="passType" value="blue" class="peer hidden" checked onchange="renderPreview()">
+          <div class="bg-blue-500 w-1.5 h-8 rounded-full mr-4"></div>
+          <span class="text-lg font-bold text-slate-700">Blue</span>
+          <i data-lucide="check-circle-2" class="ml-auto text-blue-500 opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+        </label>
+        <label class="relative flex items-center p-4 cursor-pointer rounded-2xl border-2 border-slate-100 bg-white hover:border-emerald-500 transition-all group">
+          <input type="radio" name="passType" value="green" class="peer hidden" onchange="renderPreview()">
+          <div class="bg-emerald-500 w-1.5 h-8 rounded-full mr-4"></div>
+          <span class="text-lg font-bold text-slate-700">Green</span>
+          <i data-lucide="check-circle-2" class="ml-auto text-emerald-500 opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+        </label>
+        <label class="relative flex items-center p-4 cursor-pointer rounded-2xl border-2 border-slate-100 bg-white hover:border-orange-500 transition-all group">
+          <input type="radio" name="passType" value="orange" class="peer hidden" onchange="renderPreview()">
+          <div class="bg-orange-500 w-1.5 h-8 rounded-full mr-4"></div>
+          <span class="text-lg font-bold text-slate-700">Orange</span>
+          <i data-lucide="check-circle-2" class="ml-auto text-orange-500 opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+        </label>
+      </div>
+    </section>
+
+    <section class="glass rounded-3xl p-8 shadow-xl flex flex-col border border-white">
+      <h3 class="text-xl font-bold mb-6 flex items-center gap-3 text-slate-800">
+        <span class="bg-slate-800 text-white w-7 h-7 rounded-lg flex items-center justify-center text-xs">02</span>
+        Upload Excel
+      </h3>
+      <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
+      <div id="dropzone" class="flex-grow border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center p-6 bg-slate-50/50 hover:bg-white hover:border-teal-500 transition-all cursor-pointer group">
+        <div class="bg-white p-4 rounded-2xl shadow-sm mb-4 group-hover:scale-110 transition-transform">
+          <i data-lucide="upload-cloud" class="w-8 h-8 text-teal-600"></i>
+        </div>
+        <p id="fileNameDisplay" class="text-slate-700 font-bold">Import Spreadsheet</p>
+        <p id="subText" class="text-slate-400 text-xs mt-1 text-center">Drag and drop or click to browse</p>
+      </div>
+
+      <button onclick="handleGenerate()" class="w-full mt-6 relative overflow-hidden bg-gradient-to-r from-amber-300 via-yellow-500 to-amber-600 text-slate-900 py-5 rounded-2xl font-black text-lg shadow-[0_10px_25px_-5px_rgba(202,138,4,0.3)] hover:shadow-[0_15px_30px_-5px_rgba(202,138,4,0.5)] hover:-translate-y-0.5 transition-all duration-500 flex items-center justify-center gap-3 uppercase tracking-tighter group">
+        <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:animate-shimmer transition-transform"></div>
+        <span class="relative z-10">Generate Cards</span>
+        <i data-lucide="arrow-right" class="w-6 h-6 relative z-10 group-hover:translate-x-2 transition-transform duration-300"></i>
+      </button>
+    </section>
+  </main>
+
+  <section id="previewSection" class="hidden mt-16 w-full max-w-6xl">
+    <div class="flex flex-col md:flex-row items-center justify-between mb-8 px-4 gap-4">
+      <div>
+        <h3 class="text-2xl font-black text-slate-800 uppercase tracking-tight">Data Preview</h3>
+        <p class="text-slate-500 text-sm font-medium">Review grouped assignments before export</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="downloadAllCovers()" class="relative overflow-hidden bg-gradient-to-r from-red-500 via-red-600 to-rose-700 text-white px-6 py-2.5 rounded-xl font-black text-sm shadow-[0_4px_15px_rgba(220,38,38,0.3)] hover:shadow-[0_8px_20px_rgba(220,38,38,0.5)] hover:-translate-y-0.5 transition-all flex items-center gap-2 group/all">
+          <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/all:animate-shimmer transition-transform"></div>
+          <i data-lucide="layers" class="w-4 h-4 relative z-10"></i>
+          <span class="relative z-10 tracking-tight">Download All Cards</span>
+        </button>
+
+        <div id="badgeCount" class="bg-white px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-700 text-sm shadow-sm flex items-center gap-2">
+          <span class="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></span>
+          <span id="countText">0 Groups Found</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="previewContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-4"></div>
+
+    <div class="flex flex-col items-center gap-4 mt-12 mb-20">
+      <div id="paginationButtons" class="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200"></div>
+      <p id="pageInfo" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]"></p>
+    </div>
+  </section>
+
+  <div id="loadingOverlay" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all duration-300">
+    <div class="relative flex items-center justify-center">
+        <div class="absolute w-20 h-20 rounded-full border-4 border-t-amber-400 border-r-transparent border-b-amber-600 border-l-transparent animate-spin"></div>
+        <div class="bg-white p-4 rounded-full shadow-2xl">
+            <i data-lucide="loader-2" class="w-8 h-8 text-slate-800 animate-spin"></i>
+        </div>
+    </div>
+    <div class="mt-6 text-center">
+        <h4 class="text-white font-black text-xl tracking-tighter uppercase">Processing Cards</h4>
+        <p class="text-amber-400 text-xs font-bold tracking-[0.3em] animate-pulse mt-1">Creating ZIP Archive...</p>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+
+    let busGroups = {};
+    let currentPage = 1;
+    const itemsPerPage = 6;
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => processFile(e.target.files[0]));
+
+    function processFile(file) {
+      if (!file) return;
+      document.getElementById('fileNameDisplay').innerText = file.name;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const rawJson = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+        busGroups = rawJson.reduce((acc, row) => {
+          const plate = row['Plate #'] || row['plateno'] || row['PLATE'] || 'N/A';
+          if (!acc[plate]) {
+            acc[plate] = {
+              details: {
+                plateNo: plate,
+                type: row['TYPE'] || row['type'] ||'N/A',
+                brand: row['BRAND'] || 'N/A',
+                color: row['COLOR'] || 'N/A',
+                contactNo: row['MOBILE'] || row['MOB'] || 'N/A',
+                cardNo: row['CARD NO'] || row['CARD #'] || 'N/A',
+                parentName: row['PARENT NAME'] ||row['GUARDIAN'] || row['NAME'] || 'N/A'
+              },
+              students: []
+            };
+          }
+          acc[plate].students.push({
+            name: row['STUDENT NAME'] || row['STUDENT'] || 'Unknown',
+            grade: row['GRADE'] || row['CLASS'] || 'N/A',
+            division: row['DIVISION'] || '',
+            admNo: row['ADM NO'] || row['ADM #'] || row['ADMN'] || row['ADMISSION'] || 'N/A'
+
+          });
+          return acc;
+        }, {});
+
+        currentPage = 1;
+        renderPreview();
+        document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderPreview() {
+      const container = document.getElementById('previewContainer');
+      const section = document.getElementById('previewSection');
+      const type = document.querySelector('input[name="passType"]:checked').value;
+
+      const themes = {
+        blue: { bg: 'bg-blue-600', light: 'bg-blue-50', text: 'text-blue-600' },
+        green: { bg: 'bg-emerald-600', light: 'bg-emerald-50', text: 'text-emerald-600' },
+        orange: { bg: 'bg-orange-500', light: 'bg-orange-50', text: 'text-orange-500' }
+      };
+      const theme = themes[type];
+
+      const keys = Object.keys(busGroups);
+      if (keys.length === 0) return;
+
+      const totalPages = Math.ceil(keys.length / itemsPerPage);
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const paginatedItems = Object.values(busGroups).slice(start, end);
+
+      container.innerHTML = '';
+      section.classList.remove('hidden');
+      document.getElementById('countText').innerText = `${keys.length} Groups Found`;
+
+      paginatedItems.forEach(bus => {
+        const card = document.createElement('div');
+        card.className = "ticket-cut relative bg-white rounded-[2.2rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col h-[480px] group/card hover:shadow-2xl transition-all";
+        card.innerHTML = `
+            <div class="${theme.bg} p-6 text-white relative">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm"><i data-lucide="bus-front" class="w-5 h-5"></i></div>
+                    <button onclick="downloadSingle('${bus.details.plateNo}')" class="bg-white/20 hover:bg-white/40 p-2 rounded-full transition-all active:scale-90 group/dl">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Vehicle Plate</p>
+                <h3 class="text-3xl font-black tracking-tighter">${bus.details.plateNo}</h3>
+                <p class="text-[10px] font-mono mt-1 opacity-80 uppercase tracking-tighter">P/D Name: ${bus.details.parentName}</p>
+                <p class="text-[10px] font-mono mt-1 opacity-80 uppercase tracking-tighter">CARD NO: ${bus.details.cardNo}</p>
+                <p class="text-[10px] font-mono mt-1 opacity-80 uppercase tracking-tighter">Contact: ${bus.details.contactNo}</p>
+            </div>
+            <div class="p-6 flex-grow">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-2xl ${theme.light} flex items-center justify-center border border-white">
+                        <i data-lucide="shield-check" class="${theme.text} w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-tight">${bus.details.brand}</p>
+                        <p class="text-sm font-black text-slate-800">${bus.details.color} Fleet</p>
+                    </div>
+                </div>
+                <div class="space-y-2 overflow-y-auto max-h-[180px] pr-2 custom-scroll">
+                    ${bus.students.map(s => `
+                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 hover:bg-white transition-colors">
+                            <div class="flex justify-between items-center">
+                                <p class="text-[11px] font-black text-slate-700 uppercase">${s.name}</p>
+                                <span class="text-[10px] font-bold ${theme.text}">${s.grade}-${s.division}</span>
+                            </div>
+                        </div>`).join('')}
+                </div>
+            </div>`;
+        container.appendChild(card);
+      });
+
+      renderPagination(totalPages);
+      lucide.createIcons();
+    }
+
+    function renderPagination(totalPages) {
+      const nav = document.getElementById('paginationButtons');
+      const info = document.getElementById('pageInfo');
+      nav.innerHTML = '';
+      nav.appendChild(createPageBtn('<i data-lucide="chevron-left" class="w-4 h-4"></i>', currentPage > 1, () => { currentPage--; renderPreview(); }));
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+          nav.appendChild(createPageBtn(i, true, () => { currentPage = i; renderPreview(); }, i === currentPage));
+        }
+      }
+      nav.appendChild(createPageBtn('<i data-lucide="chevron-right" class="w-4 h-4"></i>', currentPage < totalPages, () => { currentPage++; renderPreview(); }));
+      info.innerText = `Displaying Page ${currentPage} of ${totalPages}`;
+    }
+
+    function createPageBtn(content, enabled, onClick, isActive = false) {
+      const btn = document.createElement('button');
+      btn.innerHTML = content;
+      btn.disabled = !enabled;
+      btn.className = `w-10 h-10 flex items-center justify-center rounded-xl font-bold text-xs transition-all
+                ${isActive ? 'bg-amber-400 text-slate-900 shadow-md scale-105' : 'hover:bg-slate-100 text-slate-600'}
+                ${!enabled ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer hover:scale-110'}`;
+      if (enabled) btn.onclick = onClick;
+      return btn;
+    }
+
+    function handleGenerate() {
+      if (Object.keys(busGroups).length === 0) return alert("Please upload an Excel file first!");
+      renderPreview();
+      window.scrollTo({ top: document.getElementById('previewSection').offsetTop - 50, behavior: 'smooth' });
+    }
+
+    async function downloadAllCovers() {
+      if (!busGroups || Object.keys(busGroups).length === 0) return alert("No data available.");
+
+      const overlay = document.getElementById('loadingOverlay');
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+
+      // Small delay to allow overlay to render
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      try {
+        const zip = new JSZip();
+        const frontImg = new Image();
+        frontImg.src = "front_cover.jpeg"; 
+        const backImg = new Image();
+        backImg.src = "back_cover.jpeg"; 
+
+        await Promise.all([
+          new Promise((res, rej) => { frontImg.onload = res; frontImg.onerror = rej; }),
+          new Promise((res, rej) => { backImg.onload = res; backImg.onerror = rej; })
+        ]);
+
+        const keys = Object.keys(busGroups);
+
+        for (let plate of keys) {
+          const bus = busGroups[plate];
+
+          // Front
+          const fCanvas = document.createElement("canvas");
+          fCanvas.width = frontImg.width;
+          fCanvas.height = frontImg.height;
+          const fctx = fCanvas.getContext("2d");
+          fctx.drawImage(frontImg, 0, 0);
+          fctx.font = "bold 90px Arial";
+          fctx.fillStyle = "black";
+          
+          fctx.fillText(bus.details.plateNo, 850, 830);
+          fctx.fillText(bus.details.type, 810, 990);
+          fctx.fillText(bus.details.parentName.toUpperCase(), 810, 1150);
+          fctx.fillText(bus.details.contactNo,  810, 1327);
+          fctx.fillText(bus.details.brand.toUpperCase(), 1960, 830);
+
+          fctx.fillText(bus.details.color.toUpperCase(), 1960, 980);
+          fctx.fillText( bus.details.cardNo, 1960, 1320);
+
+
+          const fBlob = await new Promise(r => fCanvas.toBlob(r, 'image/png'));
+          zip.file(`${plate}_front.png`, fBlob);
+
+          // Back
+          const bCanvas = document.createElement("canvas");
+          bCanvas.width = backImg.width;
+          bCanvas.height = backImg.height;
+          const bctx = bCanvas.getContext("2d");
+          bctx.drawImage(backImg, 0, 0);
+          bctx.font = "bold 70px Arial";
+          bctx.fillStyle = "black";
+          // bctx.fillText(`Students:`, 850, 830);
+          let y = 910;
+          bus.students.forEach(s => {
+            bctx.fillText(s.name.toUpperCase(), 650, y);
+            bctx.fillText(s.admNo, 220, y);
+            bctx.fillText(`${s.grade}-${s.division.toUpperCase()}`, 2130, y);
+
+
+            y += 90;
+          });
+          const bBlob = await new Promise(r => bCanvas.toBlob(r, 'image/png'));
+          zip.file(`${plate}_back.png`, bBlob);
+        }
+
+        const content = await zip.generateAsync({ type: "blob" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(content);
+        a.download = "vehicle_cards.zip";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+      } catch (err) {
+          alert("Error generating files. Ensure 'front_cover.jpeg' and 'back_cover.jpeg' exist.");
+          console.error(err);
+      } finally {
+          overlay.classList.add('hidden');
+          overlay.classList.remove('flex');
+      }
+    }
+
+    function downloadSingle(plate) {
+      alert(`Individual download for ${plate} requested. Click 'Download All' for batch processing.`);
+    }
+  </script>
+</body>
+</html>
